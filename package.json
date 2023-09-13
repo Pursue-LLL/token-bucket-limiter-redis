@@ -1,0 +1,54 @@
+{
+  "name": "token-bucket-limiter-redis",
+  "version": "1.0.1",
+  "main": "dist/bundle.cjs",
+  "module": "dist/bundle.js",
+  "types": "dist/types/index.d.ts",
+  "description": "令牌桶算法+redis限流器",
+  "keywords": [
+    "ratelimiter",
+    "rate",
+    "limiter",
+    "limit",
+    "redis",
+    "redislimiter",
+    "bucket"
+  ],
+  "exports": {
+    ".": {
+      "require": "./dist/bundle.cjs",
+      "import": "./dist/bundle.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "pub": "npm version patch && npm run build && npm publish"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "README.md"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.1.0",
+    "@rollup/plugin-terser": "^0.4.1",
+    "rollup-plugin-copy": "^3.4.0",
+    "rollup": "^3.21.0"
+  },
+  "dependencies": {
+  },
+  "peerDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "author": "Pursue-LLL",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pursue-LLL/token-bucket-limiter-redis.git"
+  }
+}
