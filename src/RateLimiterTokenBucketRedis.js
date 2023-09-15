@@ -12,7 +12,9 @@ class RateLimiterTokenBucketRedis {
    * @param {number} opts.capacity - 容量（最大突发流量）
    * @param {RedisClient} opts.redisClient - Redis 客户端
    * @param {string} opts.keyPrefix - Redis 键名前缀
-   * @param {boolean} opts.standby - 是否启用备用策略
+   * @param {boolean} opts.insuranceLimiter - 是否启用备用策略
+   * @param {number} opts.insuranceLimiterTokenPerSecond - 每秒允许的令牌数
+   * @param {number} opts.3 - 容量（最大突发流量）
    * @param {number} opts.inMemoryBlockOnConsumed - 1分钟消耗令牌数触发阻塞的阈值
    * @param {number} opts.inMemoryBlockDuration - 阻塞时间（秒）
    */
@@ -21,7 +23,7 @@ class RateLimiterTokenBucketRedis {
     this.capacity = opts.capacity; // 容量（最大突发流量）
     this.redis = opts.redisClient;
     this.keyPrefix = opts.keyPrefix;
-    this.standby = opts.standby;
+    this.insuranceLimiter = opts.insuranceLimiter;
     this.inMemoryBlockOnConsumed = opts.inMemoryBlockOnConsumed; // 1分钟消耗token数触发阻塞的阈值
     this.inMemoryBlockDuration = opts.inMemoryBlockDuration; // 阻塞时间s
     this.blockedKeys = new Map();
@@ -35,10 +37,10 @@ class RateLimiterTokenBucketRedis {
     }
 
     // 启用备用策略
-    if (this.standby) {
+    if (this.insuranceLimiter) {
       this.rateLimiterTokenBucket = new RateLimiterTokenBucket({
-        tokenPerSecond: this.tokenPerSecond,
-        capacity: this.capacity,
+        tokenPerSecond: opts.insuranceLimiterTokenPerSecond || this.tokenPerSecond,
+        capacity: opts.insuranceLimiterCapacity || this.capacity,
         keyPrefix: this.keyPrefix,
       });
     }
@@ -90,16 +92,16 @@ class RateLimiterTokenBucketRedis {
   /**
    * 获取令牌
    *
-   * @param {string} curKey - 当前键名
+   * @param {string} tokenKey - 令牌标识
+   * @param {string} blockKey - 可选，阻塞键标识，通常是ip或用户id
    * @returns {Promise<number>} - 返回当前可用的令牌数
    */
   // eslint-disable-next-line complexity
-  async getToken(curKey) {
-    const key = this.keyPrefix + curKey;
+  async getToken(tokenKey, blockKey) {
+    const key = this.keyPrefix + tokenKey;
+    const blockedKey = blockKey ? this.keyPrefix + blockKey : key;
 
-    console.log('🚀 | file: RateLimiterTokenBucketRedis.js:83 | RateLimiterTokenBucketRedis | getToken | this._isKeyBlocked(key):', this._isKeyBlocked(key));
-
-    if (this._isKeyBlocked(key)) {
+    if (this._isKeyBlocked(blockedKey)) {
       return 0;
     }
     try {
@@ -110,31 +112,32 @@ class RateLimiterTokenBucketRedis {
         // 如果没有可用的令牌且设置了 inMemoryBlockOnConsumed 选项
         if (currentTokens === 0 && this.inMemoryBlockOnConsumed) {
           // 获取该键在一分钟内消耗的令牌数
-          const consumedTokens = this.blockedKeys.get(`${key}:consumed`) || 0;
+          const consumedTokens = this.blockedKeys.get(`${blockedKey}:consumed`) || 0;
 
           // 如果该键在一分钟内消耗的令牌数超过了 inMemoryBlockOnConsumed 选项指定的阈值
           if (consumedTokens && consumedTokens >= this.inMemoryBlockOnConsumed) {
             // 使用 _blockKey 方法在内存中阻塞该键
-            this._blockKey(key);
+            this._blockKey(blockedKey);
           } else {
             // 增加该键在一分钟内消耗的令牌数并将其过期时间设置为 60 秒
-            this.blockedKeys.set(`${key}:consumed`, consumedTokens + 1);
+            this.blockedKeys.set(`${blockedKey}:consumed`, consumedTokens + 1);
             setTimeout(() => {
-              this.blockedKeys.delete(`${key}:consumed`);
+              this.blockedKeys.delete(`${blockedKey}:consumed`);
             }, 60000);
           }
         }
 
         // 返回当前令牌数
         return currentTokens;
-      } if (this.standby) {
+      }
+      if (this.insuranceLimiter) {
         // 如果 Redis 连接不正常且启用了备用策略，则使用 RateLimiterTokenBucket 实例作为备用方案并调用其 getToken 方法获取当前令牌数
         return await this.rateLimiterTokenBucket.getToken(key);
       }
       // 如果 Redis 连接不正常且未启用备用策略，则返回 1 表示有一个可用的令牌
       return 1;
     } catch (error) {
-      if (this.standby) {
+      if (this.insuranceLimiter) {
         return await this.rateLimiterTokenBucket.getToken(key);
       }
       return 1;

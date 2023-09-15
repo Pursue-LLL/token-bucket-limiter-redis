@@ -18,11 +18,13 @@ export interface RateLimiterTokenBucketRedisOptions {
   redisOptions?: RedisOptions;
   keyPrefix: string;
   insuranceLimiter?: boolean;
+  insuranceLimiterTokenPerSecond?: number;
+  insuranceLimiterCapacity?: number;
   inMemoryBlockOnConsumed?: number;
   inMemoryBlockDuration?: number;
 }
 
 export class RateLimiterTokenBucketRedis {
   constructor(options: RateLimiterTokenBucketRedisOptions);
-  getToken(key: string): Promise<number>;
+  getToken(tokenKey: string, blockKey?: string): Promise<number>;
 }

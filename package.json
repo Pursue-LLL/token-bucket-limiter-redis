@@ -1,6 +1,6 @@
 {
   "name": "token-bucket-limiter-redis",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "dist/bundle.cjs",
   "module": "dist/bundle.js",
   "types": "dist/types/index.d.ts",
