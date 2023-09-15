@@ -163,7 +163,7 @@ const glopbalRateLimiter = new RateLimiterTokenBucketRedis({
     keyPrefix: 'test', // 指定限流器所属项目或模块
     redisOptions: redis,
 
-    // 内存阻塞策略（只计算当前服务器的请求数，非分布式）
+    // 内存阻塞策略（只计算当前服务器或实例的请求数，非分布式）
     inMemoryBlockOnConsumed: 50, // 如果某个key在一分钟内消耗的令牌数量超过 50，将在内存中阻塞该key的请求，不会发起redis，防止DDoS攻击
     inMemoryBlockDuration: 10, // 阻塞持续时间s
   });

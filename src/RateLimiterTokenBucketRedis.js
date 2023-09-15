@@ -101,46 +101,82 @@ class RateLimiterTokenBucketRedis {
     const key = this.keyPrefix + tokenKey;
     const blockedKey = blockKey ? this.keyPrefix + blockKey : key;
 
+    // 如果键被阻塞，则返回0
     if (this._isKeyBlocked(blockedKey)) {
       return 0;
     }
-    try {
-      if (this._isRedisReady()) {
-        // 如果 Redis 连接正常，执行 Lua 脚本获取当前令牌数
-        const currentTokens = await this.redis.eval(this.script, 1, key, this.capacity, Date.now());
 
-        // 如果没有可用的令牌且设置了 inMemoryBlockOnConsumed 选项
-        if (currentTokens === 0 && this.inMemoryBlockOnConsumed) {
-          // 获取该键在一分钟内消耗的令牌数
-          const consumedTokens = this.blockedKeys.get(`${blockedKey}:consumed`) || 0;
+    // 如果设置了inMemoryBlockOnConsumed选项
+    if (this.inMemoryBlockOnConsumed) {
+      // 获取该键在一分钟内消耗的令牌数和最后一次请求的时间戳
+      const { consumedTokens, lastRequest } = this.blockedKeys.get(`${blockedKey}:consumed`) || { consumedTokens: 1, lastRequest: Date.now() };
 
-          // 如果该键在一分钟内消耗的令牌数超过了 inMemoryBlockOnConsumed 选项指定的阈值
-          if (consumedTokens && consumedTokens >= this.inMemoryBlockOnConsumed) {
-            // 使用 _blockKey 方法在内存中阻塞该键
-            this._blockKey(blockedKey);
-          } else {
-            // 增加该键在一分钟内消耗的令牌数并将其过期时间设置为 60 秒
-            this.blockedKeys.set(`${blockedKey}:consumed`, consumedTokens + 1);
-            setTimeout(() => {
-              this.blockedKeys.delete(`${blockedKey}:consumed`);
-            }, 60000);
-          }
+      // 如果当前时间与最后一次请求的时间差超过一分钟
+      if (Date.now() - lastRequest >= 60000) {
+        // 清除该键的消耗记录
+        this.blockedKeys.delete(`${blockedKey}:consumed`);
+        this.blockedKeys.set(`${blockedKey}:consumed`, { consumedTokens: consumedTokens + 1, lastRequest: Date.now() });
+      } else if (consumedTokens >= this.inMemoryBlockOnConsumed) {
+        // 如果该键在一分钟内消耗的令牌数超过了inMemoryBlockOnConsumed选项指定的阈值
+        // 在内存中阻塞该键
+        this._blockKey(blockedKey);
+      } else {
+        // 增加该键在一分钟内消耗的令牌数，并更新最后一次请求的时间戳
+        this.blockedKeys.set(`${blockedKey}:consumed`, { consumedTokens: consumedTokens + 1, lastRequest: Date.now() });
+        // 当阻塞键的数量超过999时，收集过期的阻塞键
+        if (this.blockedKeys.size > 0) {
+          this._collectExpiredBlockedKeys();
         }
+      }
+    }
 
+    try {
+      // 如果Redis连接正常
+      if (this._isRedisReady()) {
+        // 执行Lua脚本获取当前令牌数
+        const currentTokens = await this.redis.eval(this.script, 1, key, this.capacity, Date.now());
         // 返回当前令牌数
         return currentTokens;
       }
+      // 如果Redis连接不正常且启用了备用策略，则使用RateLimiterTokenBucket实例作为备用方案并调用其getToken方法获取当前令牌数
       if (this.insuranceLimiter) {
-        // 如果 Redis 连接不正常且启用了备用策略，则使用 RateLimiterTokenBucket 实例作为备用方案并调用其 getToken 方法获取当前令牌数
         return await this.rateLimiterTokenBucket.getToken(key);
       }
-      // 如果 Redis 连接不正常且未启用备用策略，则返回 1 表示有一个可用的令牌
+      // 如果Redis连接不正常且未启用备用策略，则返回1表示有一个可用的令牌
       return 1;
     } catch (error) {
+      // 如果发生错误且启用了备用策略，则使用RateLimiterTokenBucket实例作为备用方案并调用其getToken方法获取当前令牌数
       if (this.insuranceLimiter) {
         return await this.rateLimiterTokenBucket.getToken(key);
       }
+      // 如果发生错误且未启用备用策略，则返回1表示有一个可用的令牌
       return 1;
+    }
+  }
+
+  /**
+   * 在内存中阻塞键，并设置过期时间
+   *
+   * @param {string} key
+   */
+  _blockKey(key) {
+    this.blockedKeys.set(key, Date.now() + this.inMemoryBlockDuration * 1000);
+  }
+
+  /**
+   * 清除过期的阻塞键
+   */
+  _collectExpiredBlockedKeys() {
+    const now = Date.now();
+    for (const [key, val] of this.blockedKeys.entries()) {
+      if (typeof val === 'number' && val <= now) {
+        this.blockedKeys.delete(key);
+      }
+      if (key.includes('consumed')) {
+        if (now - val.lastRequest >= 60000) {
+          this.blockedKeys.delete(key);
+        }
+      }
     }
   }
 
@@ -174,19 +210,8 @@ class RateLimiterTokenBucketRedis {
       return true;
     }
     this.blockedKeys.delete(key);
+    this.blockedKeys.delete(`${key}:consumed`);
     return false;
-  }
-
-  /**
-   * 阻塞指定的键
-   *
-   * @private
-   * @param {*} key - 指定的键
-   */
-  _blockKey(key) {
-    // 阻塞截止时间
-    const blockUntil = Date.now() + this.inMemoryBlockDuration * 1000;
-    this.blockedKeys.set(key, blockUntil);
   }
 }
 
