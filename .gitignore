@@ -2,3 +2,6 @@ node_modules
 dist
 .rollup.cache
 */.DS_Store
+
+package1.json
+README1.md

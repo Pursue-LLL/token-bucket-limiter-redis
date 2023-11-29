@@ -1,4 +1,5 @@
 /* eslint-disable no-plusplus */
+import { getClientIp } from './utils';
 /**
  * 令牌桶限流器（基于内存）
  */
@@ -31,6 +32,17 @@ class RateLimiterTokenBucket {
   }
 
   /**
+   * 获取一个令牌，key基于ip
+   * @param {Object} req - 请求对象
+   * @param {string} key - 限流键值，默认ip，如传入则组合在ip后 ip+key
+   * @returns {boolean} 获取是否成功
+   */
+  getTokenUseIp(req, curKey = '') {
+    const ip = getClientIp(req);
+    return this.getToken(ip + curKey);
+  }
+
+  /**
    * 获取一个令牌
    * @param {string} key - 限流键值，不传默认为 'RateLimiterTokenBucketGlobalKey'，即全局限流
    * @returns {boolean} 获取是否成功
@@ -41,7 +53,7 @@ class RateLimiterTokenBucket {
 
     // 初始化key对应的令牌数和上次取令牌时间
     if (!this.tokens[key]) {
-      this.tokens[key] = this.capacity - 1;
+      this.tokens[key] = this.capacity;
       this.lastTime[key] = now;
     }
 
@@ -54,12 +66,15 @@ class RateLimiterTokenBucket {
     // 更新最后时间
     this.lastTime[key] = now;
 
-    if (this.tokens[key] < 1) {
-      return false;
-    }
-    // 令牌数大于0, 获取成功
-    this.tokens[key]--;
-    return true;
+    const currentTokens = this.tokens[key];
+    if (currentTokens > 0) this.tokens[key]--;
+    return currentTokens;
+    // if (this.tokens[key] < 1) {
+    //   return false;
+    // }
+    // // 令牌数大于0, 获取成功
+    // this.tokens[key]--;
+    // return true;
   }
 }
 

@@ -1,10 +1,10 @@
 {
   "name": "token-bucket-limiter-redis",
-  "version": "1.0.5",
+  "version": "2.0.0",
   "main": "dist/bundle.cjs",
   "module": "dist/bundle.js",
   "types": "dist/types/index.d.ts",
-  "description": "Ratelimiter using token bucket algorithm, either in-memory or backed by Redis",
+  "description": "令牌桶算法+redis限流器",
   "keywords": [
     "ratelimiter",
     "rate",
@@ -50,7 +50,7 @@
   "peerDependencies": {
     "ioredis": "^5.0.0"
   },
-  "author": "Pursue-LLL",
+  "author": "Pursue-LLL <pursuebetter2018@163.com>",
   "license": "MIT",
   "homepage": "https://www.npmjs.com/package/token-bucket-limiter-redis",
   "repository": {

@@ -8,7 +8,8 @@ export interface RateLimiterTokenBucketOptions {
 
 export class RateLimiterTokenBucket {
   constructor(options?: RateLimiterTokenBucketOptions);
-  getToken(key?: string): boolean;
+  getToken(key?: string): number;
+  getTokenUseIp(request: object, key?: string): number;
 }
 
 export interface RateLimiterTokenBucketRedisOptions {
@@ -27,4 +28,5 @@ export interface RateLimiterTokenBucketRedisOptions {
 export class RateLimiterTokenBucketRedis {
   constructor(options: RateLimiterTokenBucketRedisOptions);
   getToken(tokenKey: string, blockKey?: string): Promise<number>;
+  getTokenUseIp(request: object, tokenKey: string, blockKey?: string): Promise<number>;
 }

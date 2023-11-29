@@ -2,6 +2,7 @@
  *  @description 令牌桶限流器（基于redis）
  */
 import RateLimiterTokenBucket from './RateLimiterTokenBucket';
+import { getClientIp } from './utils';
 
 class RateLimiterTokenBucketRedis {
   /**
@@ -14,7 +15,6 @@ class RateLimiterTokenBucketRedis {
    * @param {string} opts.keyPrefix - Redis 键名前缀
    * @param {boolean} opts.insuranceLimiter - 是否启用备用策略
    * @param {number} opts.insuranceLimiterTokenPerSecond - 每秒允许的令牌数
-   * @param {number} opts.3 - 容量（最大突发流量）
    * @param {number} opts.inMemoryBlockOnConsumed - 1分钟消耗令牌数触发阻塞的阈值
    * @param {number} opts.inMemoryBlockDuration - 阻塞时间（秒）
    */
@@ -90,6 +90,18 @@ class RateLimiterTokenBucketRedis {
   }
 
   /**
+   * 获取一个令牌，key基于ip
+   * @param {Object} req - 请求对象
+   * @param {string} tokenKey - 限流键值，默认ip，如传入则组合在ip后 ip+key
+   * @param {string} blockKey - 可选，阻塞键标识，通常是ip或用户id，默认ip
+   * @returns {Promise<number>} - 返回当前可用的令牌数
+   */
+  async getTokenUseIp(req, tokenKey = '', blockKey = '') {
+    const ip = getClientIp(req);
+    return await this.getToken(ip + tokenKey, blockKey || ip);
+  }
+
+  /**
    * 获取令牌
    *
    * @param {string} tokenKey - 令牌标识
@@ -101,12 +113,12 @@ class RateLimiterTokenBucketRedis {
     const key = this.keyPrefix + tokenKey;
     const blockedKey = blockKey ? this.keyPrefix + blockKey : key;
 
-    // 如果键被阻塞，则返回0
+    // 如果键被阻塞，则返回0（内存阻塞策略优先）
     if (this._isKeyBlocked(blockedKey)) {
       return 0;
     }
 
-    // 如果设置了inMemoryBlockOnConsumed选项
+    // 如果设置了inMemoryBlockOnConsumed选项（redis崩掉时该功能也生效）
     if (this.inMemoryBlockOnConsumed) {
       // 获取该键在一分钟内消耗的令牌数和最后一次请求的时间戳
       const { consumedTokens, lastRequest } = this.blockedKeys.get(`${blockedKey}:consumed`) || { consumedTokens: 1, lastRequest: Date.now() };
