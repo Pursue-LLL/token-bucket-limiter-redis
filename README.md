@@ -215,7 +215,7 @@ app.listen(3000, () => {
 
 ```
 
-#### 在 fastfy 中使用
+#### 在 fastify 中使用
 
 ```js
 const fastify = require('fastify')();
