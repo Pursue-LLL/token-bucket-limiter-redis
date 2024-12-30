@@ -1,6 +1,6 @@
 {
   "name": "token-bucket-limiter-redis",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "main": "dist/bundle.cjs",
   "module": "dist/bundle.js",
   "types": "dist/types/index.d.ts",
@@ -13,6 +13,7 @@
     "redis",
     "redislimiter",
     "bucket",
+    "bucket limiter",
     "令牌桶限流器",
     "限流器"
   ],
@@ -35,7 +36,8 @@
     "src",
     "types",
     "README.md",
-    "README_zh.md"
+    "README_zh.md",
+    "README_en.md"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -44,6 +46,8 @@
     "@rollup/plugin-commonjs": "^24.1.0",
     "@rollup/plugin-terser": "^0.4.1",
     "rollup-plugin-copy": "^3.4.0",
+    "ava": "^3.15.0",
+    "ioredis": "^5.4.2",
     "rollup": "^3.21.0"
   },
   "dependencies": {},
@@ -56,5 +60,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Pursue-LLL/token-bucket-limiter-redis.git"
+  },
+  "ava": {
+    "files": [
+      "src/__tests__/**/*.test.js"
+    ],
+    "concurrency": 10,
+    "verbose": true
   }
 }

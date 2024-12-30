@@ -4,6 +4,9 @@ export interface RateLimiterTokenBucketOptions {
   tokenPerSecond: number;
   capacity: number;
   keyPrefix: string;
+  lockDuration?: number;
+  inMemoryBlockOnConsumed?: number;
+  inMemoryBlockDuration?: number;
 }
 
 export class RateLimiterTokenBucket {
@@ -23,6 +26,7 @@ export interface RateLimiterTokenBucketRedisOptions {
   insuranceLimiterCapacity?: number;
   inMemoryBlockOnConsumed?: number;
   inMemoryBlockDuration?: number;
+  lockDuration?: number;
 }
 
 export class RateLimiterTokenBucketRedis {

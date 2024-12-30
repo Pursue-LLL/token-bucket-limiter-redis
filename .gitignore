@@ -4,4 +4,7 @@ dist
 */.DS_Store
 
 package1.json
+package2.json
 README1.md
+README_en.md
+README2.md

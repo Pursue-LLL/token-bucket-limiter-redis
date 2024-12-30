@@ -1,4 +1,10 @@
 
+
+/**
+ * 获取客户端IP地址
+ * @param {Object} req - 请求对象
+ * @returns {string} - 客户端IP地址
+ */
 export function getClientIp(req) {
   // 获取 X-Real-IP 头部字段
   const xRealIP = req.headers['x-real-ip'];

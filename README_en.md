@@ -246,3 +246,34 @@ Resource consumption: If there are a large number of token buckets, maintaining 
 Time synchronization: Due to precision issues, if there are multiple token buckets in the system, and each has its own timer, these timers may not be synchronized with each other.
 
 Cold start problem: If timers are used to generate tokens, the token bucket may initially be empty when the service starts, which can lead to an inability to handle requests during the initial phase.
+
+
+### What are some other keys that can identify specific users besides IP?
+
+- Browser fingerprint
+- User ID
+- Username
+- Email
+- Phone number
+- Other keys that can identify user identity
+
+```js
+// Generate browser fingerprint
+export function generateFingerprint() {
+  try {
+    // Collect some browser properties
+    const userAgent = navigator.userAgent || '';
+    const screenResolution = `${window.screen.width}x${window.screen.height}`;
+    const language = navigator.language || '';
+    const platform = navigator.platform || '';
+
+    // Combine these properties into a simple fingerprint
+    const fingerprint = userAgent + screenResolution + language + platform;
+
+    // Return the fingerprint
+    return fingerprint;
+  } catch (error) {
+    return '';
+  }
+}
+```

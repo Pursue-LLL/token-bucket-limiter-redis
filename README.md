@@ -443,3 +443,34 @@ if(globalTokens > 0){
 时间同步：由于精度问题，如果系统中存在多个令牌桶，且每个令牌桶都使用自己的定时器，那么这些定时器之间可能并不同步。
 
 冷启动问题：如果使用定时器生成令牌，那么在服务刚启动时，令牌桶可能会是空的，这可能导致在服务启动初期无法处理请求。
+
+
+### 除了ip还有哪些可以标识具体用户的key
+
+- 浏览器指纹
+- 用户id
+- 用户名
+- 邮箱
+- 手机号
+- 其他可以标识用户身份的key
+
+```js
+// 生成浏览器指纹
+export function generateFingerprint() {
+  try {
+    // 收集一些浏览器属性
+    const userAgent = navigator.userAgent || '';
+    const screenResolution = `${window.screen.width}x${window.screen.height}`;
+    const language = navigator.language || '';
+    const platform = navigator.platform || '';
+
+    // 将这些属性组合成一个简单的指纹
+    const fingerprint = userAgent + screenResolution + language + platform;
+
+    // 返回指纹
+    return fingerprint;
+  } catch (error) {
+    return '';
+  }
+}
+```
